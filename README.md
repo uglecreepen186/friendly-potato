@@ -1,67 +1,110 @@
-# friendly-potato
-import asyncio
-from io import BytesIO
-from os import remove
+## README: Telegram Image Converter Bot
 
-from skimage import io as sk_io
-from aiogram import Bot, Dispatcher, F
-from aiogram.filters import CommandStart
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, FSInputFile
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+### Описание проекта
 
-API_TOKEN = ''
+Этот проект представляет собой Telegram-бота, который позволяет пользователям конвертировать изображения, отправленные в Telegram, в различные форматы. Поддерживаются такие форматы, как JPEG, PNG, WebP, BMP, и другие. Пользователь загружает изображение, выбирает целевой формат, и бот возвращает изображение в указанном формате.
 
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
+---
 
-SUPPORTED_FORMATS = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'ppm']
-file_storage = {}
+### Требования
 
+1. Python версии 3.8 и выше
+2. Установленные пакеты:
+   - aiogram: для работы с Telegram API
+   - scikit-image: для обработки изображений
+3. Telegram API Token
 
-@dp.message(CommandStart())
-async def send_welcome(message: Message):
-    await message.answer("Привет! Пришлите мне изображение, и я конвертирую его в другой формат.")
+---
 
+### Установка и настройка
 
-@dp.message(F.photo)
-async def handle_image(message: Message):
-    file_id = message.photo[-1].file_id
-    message_id = message.message_id
-    file_storage[message_id] = file_id
+1. Клонирование репозитория
+   
+   Сначала клонируйте репозиторий с кодом бота:
+  
+   git clone https://github.com/ваш-репозиторий.git
+   
+2. Установка зависимостей
 
-    keyboard = InlineKeyboardBuilder()
-    for fmt in SUPPORTED_FORMATS:
-        keyboard.add(InlineKeyboardButton(text=fmt, callback_data=f"{fmt}:{message_id}"))
-    keyboard.adjust(2)
+   Перейдите в папку проекта и установите зависимости:
+  
+   cd ваш-репозиторий
+   pip install -r requirements.txt
+   
+   Если у вас нет файла requirements.txt, установите необходимые пакеты вручную:
+  
+   pip install aiogram scikit-image
+   
+3. Настройка Telegram API Token
 
-    await message.answer("Выберите формат для конвертации изображения:", reply_markup=keyboard.as_markup())
+   Для работы бота вам нужен Telegram API токен. Для его получения выполните следующие шаги:
+   - Откройте Telegram и найдите бот [@BotFather](https://t.me/BotFather).
+   - Используйте команду /newbot для создания нового бота.
+   - После настройки вам будет предоставлен токен.
 
+   Замените значение API_TOKEN на ваш токен в коде:
+  
+   API_TOKEN = 'ваш токен'
+   
+4. Запуск бота
 
-@dp.callback_query(F.data)
-async def process_callback(callback_query: CallbackQuery):
-    await bot.answer_callback_query(callback_query.id)
-    format_to_convert, message_id_str = callback_query.data.split(':')
-    message_id = int(message_id_str)
-    file_id = file_storage.get(message_id)
+   Для запуска бота выполните команду:
+  
+   python main.py
+   
+---
 
-    if file_id:
-        file_info = await bot.get_file(file_id)
-        file = await bot.download_file(file_info.file_path)
-        img = sk_io.imread(BytesIO(file.read()))
-        output_path = f'{message_id}.{format_to_convert}'
-        sk_io.imsave(output_path, img)
+### Использование
 
-        input_file = FSInputFile(output_path)
-        await bot.send_document(callback_query.from_user.id, input_file)
+1. Запустите бота.
+2. Отправьте ему любое изображение.
+3. Бот предложит выбрать один из доступных форматов для конвертации.
+4. Выберите нужный формат, и бот вернет вам конвертированное изображение.
 
-        del file_storage[message_id]
-        remove(output_path)
+---
 
+### Поддерживаемые форматы
 
-async def main():
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+- JPEG (jpg, jpeg)
+- PNG
+- WebP
+- BMP
+- PPM
 
+---
 
-if __name__ == '__main__':
-    asyncio.run(main())
+### Основные компоненты кода
+
+1. `send_welcome()`  
+   Отвечает пользователю приветственным сообщением при использовании команды /start.
+
+2. `handle_image()`  
+   Обрабатывает загруженные пользователями изображения. Сохраняет идентификатор изображения и предлагает выбрать формат для конвертации с помощью inline-кнопок.
+
+3. `process_callback()`  
+   Отвечает на выбор формата. Загружает исходное изображение, конвертирует его в выбранный формат, сохраняет и отправляет пользователю результат.
+
+4. Асинхронные функции  
+   Код использует асинхронные операции для работы с Telegram API, что делает взаимодействие с ботом быстрым и отзывчивым.
+
+---
+
+### Примечания
+
+- В коде используется библиотека scikit-image для работы с изображениями. Она позволяет легко считывать изображения в память и сохранять их в различных форматах.
+- Конвертированные файлы временно сохраняются на диске и удаляются сразу после отправки пользователю.
+- Бот хранит загруженные файлы в словаре file_storage на время конвертации, после чего данные удаляются.
+
+---
+
+### Возможные улучшения
+
+- Добавить возможность изменения разрешения изображения перед конвертацией.
+- Реализовать обработку и конвертацию GIF-анимаций.
+- Добавить локализацию для интерфейса бота.
+
+---
+
+### Лицензия
+
+Этот проект открыт для использования и модификации в личных и коммерческих целях.
